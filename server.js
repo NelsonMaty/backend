@@ -203,11 +203,14 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
       var auArray = {};
       var academicUnitsHierarchy = {};
 
+      // beggining of series of functions
       async.series(
-      [function(callback){
-         //querying database
+      [
+      // Step number 1: Get all academic units
+      function(callback){ 
          var sql = 'SELECT * from model.academic_unit';
          client.query(sql, function(err, result) {
+
             //Return if an error occurs
             if(err) {
                logger.error('error running query: ' + sql);
@@ -218,20 +221,21 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
             result.rows.forEach(
                function(data) {
                   var au = {
-                     auID: data.id,
+                     auName: data.name,
                      auParent: data.academic_unit_parent_id,
                      auChildren: [],
                   }
-                  auArray[data.name] = au;
+                  auArray[data.id] = au;  // adding to academic units dictionary
                }
             );
+            //logger.info("First step result:", auArray);
             callback();
          });
       },
+      // Step number 2: group careers by academic unit id, then assign them as its children
       function(callback){
-         // get all careers grouped by academic unit
          async.forEach(Object.keys(auArray), function(key, callback){
-            var sql = "select career_name from model.v_career_title where academic_unit_name='"+key+"' group by career_name";
+            var sql = "select c.name from model.career c join model.academic_unit au on c.academic_unit_id=au.id where au.id='"+key+"'";
             client.query(sql, function(err,result){
                //Return if an error occurs
                if(err) {
@@ -240,30 +244,37 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
                }
                result.rows.forEach(
                   function(data) {
-                     auArray[key].auChildren.push({"name":data.career_name});
+                     auArray[key].auChildren.push({"name":data.name});
                   }
                );
+               //logger.info(key, auArray[key].auChildren);
                callback();
             });
          },callback);
       },
+      // Step number 3: build the academic unit tree hierarchy
       function(callback){
-         for (var item in auArray){
-            academicUnitsHierarchy[auArray[item].auID] = {"name":item, "parent":auArray[item].auParent, "children": auArray[item].auChildren};
+         for (var id in auArray){
+            //Academic unit dictionary
+            academicUnitsHierarchy[id] = {"name":auArray[id].auName, "parent":auArray[id].auParent, "children": auArray[id].auChildren};
+            //logger.info(id, academicUnitsHierarchy[id]);
          }
+         //place each academic unit where it belongs
          for (var id in academicUnitsHierarchy){
             var node = academicUnitsHierarchy[id];
-            if (!!node.parent){
+            if (!!academicUnitsHierarchy[node.parent]){ // if the au has a parent
                var parentID = node.parent;
-               delete node.parent;
-               academicUnitsHierarchy[parentID].children.push(node);
-               delete academicUnitsHierarchy[id];
+               delete node.parent; //ids wont be shown in the final result
+               academicUnitsHierarchy[parentID].children.push(node); // set the au as a child
+               //logger.info(academicUnitsHierarchy[parentID]);
+               delete academicUnitsHierarchy[id]; // the au is no longer a root node
             }
          }
          callback();
       },
       ],
-      function(err, results){ // callback series function
+      // Final step: release the DB client and respond
+      function(err, results){ 
          done();
          response = [];
          for (var item in academicUnitsHierarchy){
@@ -275,7 +286,6 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
       );
    });
 });
-
 
 // retrieve all academic units
 app.get('/api/academicUnits', function(req, res, next) { 
