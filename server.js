@@ -5,7 +5,7 @@
    // call the packages we need
    var express    = require('express');        // call express
    var app        = express();                 // define our app using express
-   var pg         = require('pg.js');             // call postgres client
+   var pg         = require('pg.js');          // call postgres client
 
    var bodyParser = require('body-parser');
    var winston    = require('winston'); // logger
@@ -59,32 +59,55 @@ app.get('/api/titles', function(req, res, next) {
       }
 
       //preparing query
-      var sql = 'SELECT * from model.v_career_title'; // base query
+      var sql = ''; // base query
       var careerArray = [];      // response array
 
       var filters_mapping = {    // database columns mapping and comparison mode 
          institution:     {column_name:'edu_institution_name', strictCompare: false},
          academicUnit:    {column_name:'academic_unit_name',   strictCompare: false},
-         careerType:      {column_name:'career_type_name',     strictCompare: true},
+         careerType:      {column_name:'career_type_name',     strictCompare: true },
          career:          {column_name:'career_name',          strictCompare: false},
-         titleType:       {column_name:'title_type_name',      strictCompare: true},
-         title:           {column_name:'title',                strictCompare: false},
-         resolutionType:  {column_name:'resolution_type_name', strictCompare: true},
-         resolutionNumber:{column_name:'titulo_resol_num',     strictCompare: true},
-         resolutionYear:  {column_name:'titulo_resol_anio',    strictCompare: true}
+         titleType:       {column_name:'title_type_name',      strictCompare: true },
+         title:           {column_name:'title',                strictCompare: false}
       };
 
-      // checking which filters were used (if any)
-      var isFirstParam = true;
-      for (var key in filters_mapping) { 
+      var resolution_filters_mapping = {
+         resolutionType:   {column_name:'rt.name'          },
+         resolutionNumber: {column_name:'number_resolution'},
+         resolutionYear:   {column_name:'year_resolution'  }
+      }
 
+      var isFirstParam = true;
+      // if filtering by resolution
+      for (var key in resolution_filters_mapping) { 
+         if (!!req.param(key)){
+            // building sql query string
+            if(isFirstParam) { // we will have to join the view with the resolution tables
+               sql +=   "select distinct(vt.title_id) as title_id, edu_institution_name, "+
+                           "academic_unit_name, career_code, career_name, title_code, title, "+
+                           "title_female_title, title_type_name, title_comment, title_mode_name,"+ 
+                           "title_state_code, year_resolution, number_resolution, rt.name "+
+                        "from model.v_titles vt " +
+                           "left join model.title_resolution tr on vt.title_id = tr.title_id " +
+                           "left join model.resolution r on tr.resolution_id = r.id " +
+                           "left join model.resolution_type rt on r.type_resolution_id=rt.id " +
+                        "where " ;
+               isFirstParam = false;
+            }
+            else
+               sql += " and ";
+            sql += resolution_filters_mapping[key].column_name + " = '" + req.param(key) + "'";
+         }
+      }
+
+      // checking which filters were used (if any)
+      for (var key in filters_mapping) { 
          if (!!req.param(key)){
             // building sql query string
             if(isFirstParam)
-               {sql += " where "; isFirstParam = false;}
+               {sql += "SELECT * from model.v_titles where "; isFirstParam = false;}
             else
                sql += " and ";
-
             if(filters_mapping[key].strictCompare)
                sql += filters_mapping[key].column_name + " = '" + req.param(key) + "'";
             else
@@ -92,9 +115,9 @@ app.get('/api/titles', function(req, res, next) {
          }
       }
 
+
       // if filtering by title states
       if(req.param('titleStates')){
-         
          var jsonStates = JSON.parse(req.param('titleStates'));
          var statesArray = [];
          
@@ -107,7 +130,7 @@ app.get('/api/titles', function(req, res, next) {
             sql_like = "title_state_code like any('{\"" + sql_like + "\"}')";
 
             if(isFirstParam)
-               {sql += " where "; isFirstParam = false;}
+               {sql += "SELECT * from model.v_titles where "; isFirstParam = false;}
             else
                sql += " and ";
             sql += sql_like;
@@ -115,8 +138,10 @@ app.get('/api/titles', function(req, res, next) {
       }
 
       //no parameteres had been sent
-      if (isFirstParam)
+      if (isFirstParam){
          logger.info('No params received');
+         sql = "SELECT * from model.v_titles";
+      }
 
       //querying database
       client.query(sql, function(err, result) {
@@ -133,14 +158,17 @@ app.get('/api/titles', function(req, res, next) {
             function(data) {
                //var careerState = getCareerState(data);
                var career = {
+                  idTitle: data.title_id,
+                  institutionName: data.edu_institution_name,
                   academicUnit: data.academic_unit_name,
                   careerCode: data.career_code,
                   careerName: data.career_name,
                   titleCode: data.title_code,
                   titleName: data.title,
+                  titleFemaleName: data.title_female_title,
                   titleType: data.title_type_name,
-                  careerMode: data.title_mode_name,
-                  //state: careerState
+                  titleComment: data.title_comment,
+                  titleMode: data.title_mode_name,
                   state: data.title_state_code
                }
                careerArray.push(career);
@@ -462,6 +490,49 @@ app.get('/api/resolutionTypes', function(req, res, next) {
                var dto = {
                   resolutionTypeCode: data.code,
                   resolutionTypeName: data.name,
+               }
+               responseArray.push(dto);
+            }
+         );
+         done(); //release the pg client back to the pool 
+         res.json(responseArray);
+      });
+   });
+});
+
+// retrieve resolutions
+app.get('/api/resolutions', function(req, res, next) { 
+   logger.info('Request recieved for /api/resolutions');
+   pg.connect(conString, function(err, client, done){
+      //Return if an error occurs
+      if(err) {
+         logger.error('Could not connect to nahuel database');
+         return next(err);
+      }
+      //querying database
+      var sql = 'select * from model.title_resolution tr '+
+                  'left join model.resolution r on tr.resolution_id=r.id '+
+                  'left join model.resolution_type rt on r.type_resolution_id = rt.id';
+      if (!!req.param('idTitle')){
+         sql += " where tr.title_id = '"+req.param('idTitle')+"'";
+      }
+      var responseArray = [];
+      client.query(sql, function(err, result) {
+         //Return if an error occurs
+         if(err) {
+            logger.error('error running query: ' + sql);
+            return next(err);
+         }
+
+         // Storing result in an array
+         result.rows.forEach(
+            function(data) {
+               //var careerState = getCareerState(data);
+               var dto = {
+                  resolutionTypeName: data.name,
+                  resolutionNumber: data.number_resolution,
+                  resolutionYear: data.year_resolution,
+                  resolutionDate: data.date_resolution
                }
                responseArray.push(dto);
             }
