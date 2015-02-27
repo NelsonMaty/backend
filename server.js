@@ -7,9 +7,9 @@
    var app        = express();                 // define our app using express
    var pg         = require('pg.js');          // call postgres client
 
-   var bodyParser = require('body-parser');
-   var winston    = require('winston'); // logger
-   var async      = require('async');
+   var bodyParser = require('body-parser');    // body parser used in order to read any json data submitted
+   var winston    = require('winston');        // logger
+   var async      = require('async');          //function sequence controller
 
    var logger = new (winston.Logger)({
       transports: [
@@ -26,8 +26,6 @@
       ]
    });
 
-   // configure app to use bodyParser()
-   // this will let us get the data from a POST
    app.use(bodyParser.urlencoded({ extended: true }));
    app.use(bodyParser.json());
 
@@ -50,7 +48,7 @@ app.all('*', function(req, res, next) {
 
 // retrieve titles
 app.get('/api/titles', function(req, res, next) {
-   logger.info('Request recieved for /api/titles');
+   logger.info('Request GET recieved for /api/titles');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -182,7 +180,7 @@ app.get('/api/titles', function(req, res, next) {
 
 // retrieve all institutions
 app.get('/api/institutions', function(req, res, next) { 
-   logger.info('Request recieved for /api/institutions');
+   logger.info('Request GET recieved for /api/institutions');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -219,7 +217,7 @@ app.get('/api/institutions', function(req, res, next) {
 
 // retrieve the academic units in a tree format
 app.get('/api/academicUnitsHierarchy', function(req, res, next) { 
-   logger.info('Request recieved for /api/academicUnitsHierarchy');
+   logger.info('Request GET recieved for /api/academicUnitsHierarchy');
    pg.connect(conString, function(err, client, done){
 
       //Return if an error occurs
@@ -317,7 +315,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
 
 // retrieve all academic units
 app.get('/api/academicUnits', function(req, res, next) { 
-   logger.info('Request recieved for /api/academicUnits');
+   logger.info('Request GET recieved for /api/academicUnits');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -354,7 +352,7 @@ app.get('/api/academicUnits', function(req, res, next) {
 
 // retrieve all career types
 app.get('/api/careerTypes', function(req, res, next) { 
-   logger.info('Request recieved for /api/careerTypes');
+   logger.info('Request GET recieved for /api/careerTypes');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -391,7 +389,7 @@ app.get('/api/careerTypes', function(req, res, next) {
 
 // retrieve all title types
 app.get('/api/titleTypes', function(req, res, next) { 
-   logger.info('Request recieved for /api/titleTypes');
+   logger.info('Request GET recieved for /api/titleTypes');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -428,7 +426,7 @@ app.get('/api/titleTypes', function(req, res, next) {
 
 // retrieve all institutions
 app.get('/api/careers', function(req, res, next) { 
-   logger.info('Request recieved for /api/careers');
+   logger.info('Request GET recieved for /api/careers');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -465,7 +463,7 @@ app.get('/api/careers', function(req, res, next) {
 
 // retrieve all institutions
 app.get('/api/resolutionTypes', function(req, res, next) { 
-   logger.info('Request recieved for /api/resolutionTypes');
+   logger.info('Request GET recieved for /api/resolutionTypes');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -502,7 +500,7 @@ app.get('/api/resolutionTypes', function(req, res, next) {
 
 // retrieve resolutions
 app.get('/api/resolutions', function(req, res, next) { 
-   logger.info('Request recieved for /api/resolutions');
+   logger.info('Request GET recieved for /api/resolutions');
    pg.connect(conString, function(err, client, done){
       //Return if an error occurs
       if(err) {
@@ -540,6 +538,53 @@ app.get('/api/resolutions', function(req, res, next) {
          done(); //release the pg client back to the pool 
          res.json(responseArray);
       });
+   });
+});
+
+// update title info
+app.post('/api/title', function(req, res, next) {
+   logger.info('Request POST recieved for /api/title');
+   pg.connect(conString, function(err, client, done){
+      //Return if an error occurs
+      if(err) {
+         logger.error('Could not connect to nahuel database');
+         return next(err);
+      }
+      async.series([
+         function(cb) {
+            logger.info('Beggining transaction');
+            client.query('begin work', cb);
+         },
+         function(cb){
+            var title = req.body.title;
+            var sql = "update model.title "+
+                        "set code=$2, title=$3, female_title=$4, comment=$5 "+
+                        "where id=$1";
+            var parameters = [title.idTitle, title.titleCode, title.titleName, title.titleFemaleName, title.comment];
+            client.query(sql, parameters, cb);
+         }
+/*         function(cb){
+         },
+         function(cb){
+         }*/
+      ],
+      // Callback series function
+      function(err, result) {
+         if(err) {
+            logger.error('Performing rollback.', err);
+            return client.query('rollback work', function() {
+               logger.info("Rollback completed");
+               done();
+               next(err);
+            });
+         }
+         client.query('commit work', function(err, result) {
+            done();
+            logger.info("Commited");
+            res.json({status: 'ok', message: 'Successful update'});
+         });
+      });
+      
    });
 });
 
