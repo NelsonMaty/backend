@@ -39,10 +39,11 @@
 // ROUTES FOR OUR API
 // ===========================================================================
 
-// Enabling 'Access-Control-Allow-Origin'
 app.all('*', function(req, res, next) {
+  // Enabling 'Access-Control-Allow-Origin'
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,HEAD,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'content-Type,x-requested-with');
   next();
  });
 
@@ -550,17 +551,29 @@ app.post('/api/title', function(req, res, next) {
          logger.error('Could not connect to nahuel database');
          return next(err);
       }
+      var title = {};
       async.series([
          function(cb) {
             logger.info('Beggining transaction');
             client.query('begin work', cb);
+            title = req.body.title;
+            logger.info(title);
+         },
+         // looking for current title state id
+         function(cb){
+            var sql = "select id from model.title_state "+ 
+                        "where code=$1";
+            var parameters = [title.state];
+            client.query(sql, parameters, function(err, result){
+               //logger.info(result.rows[0].id);
+               cb();
+            });
          },
          function(cb){
-            var title = req.body.title;
             var sql = "update model.title "+
                         "set code=$2, title=$3, female_title=$4, comment=$5 "+
                         "where id=$1";
-            var parameters = [title.idTitle, title.titleCode, title.titleName, title.titleFemaleName, title.comment];
+            var parameters = [title.idTitle, title.titleCode, title.titleName, title.titleFemaleName, title.titleComment];
             client.query(sql, parameters, cb);
          }
 /*         function(cb){
