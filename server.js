@@ -757,20 +757,25 @@ app.post('/api/resolution', function(req, res, next){
             cb();
           }
           // the resolution doesnt exist, lets create it
-          else{ 
+          else{
             var resolutionCreated = {};
+            var resolutionDate = null;
+
+            if(!!resolution.resolutionMonth && !!resolution.resolutionDay){
+              resolutionDate = new Date(resolution.resolutionYear, resolution.resolutionMonth-1, resolution.resolutionDay); //Months are zero-based 
+            }
             var sql = 
             "with ins as ( " +
               "insert into model.resolution " +
-                "(id, state_enable,type_resolution_id, number_resolution, year_resolution) " +
-              "values ($1, true, $2, $3, $4) " +
+                "(id, state_enable,type_resolution_id, number_resolution, year_resolution, date_resolution) " +
+              "values ($1, true, $2, $3, $4, $5) " +
               "returning *) " +
             //joining in order to get the res type name
             "select ins.id as id_resolution, name, number_resolution, year_resolution from ins left join model.resolution_type rt " + 
               "on ins.type_resolution_id = rt.id";
             var params = [uuid.v4(), resolution.idResolutionType,
                           resolution.resolutionNumber,
-                          resolution.resolutionYear];
+                          resolution.resolutionYear, resolutionDate];
             client.query(sql, params, function(err, result){
               if(err) {
                 logger.error('Could not create resolution');
