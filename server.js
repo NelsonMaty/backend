@@ -138,14 +138,12 @@ app.get('/api/titles', function(req, res, next) {
 
     //no parameteres had been sent
     if (isFirstParam){
-      logger.info('No params received');
       sql = "SELECT * from model.v_titles";
     }
 
     //querying database
     client.query(sql, function(err, result) {
 
-      logger.info('Running query: '+sql);
       //Return if an error occurs
       if(err) {
         logger.error('Error running query.' + sql);
@@ -549,8 +547,8 @@ app.get('/api/resolutions', function(req, res, next) {
     }
     //querying database
     var sql = 'select * from model.title_resolution tr '+
-            'left join model.resolution r on tr.resolution_id=r.id '+
-            'left join model.resolution_type rt on r.type_resolution_id = rt.id';
+                'left join model.resolution r on tr.resolution_id=r.id '+
+                'left join model.resolution_type rt on r.type_resolution_id = rt.id';
     if (!!req.param('idTitle')){
       sql += " where tr.title_id = '"+req.param('idTitle')+"'";
     }
@@ -567,6 +565,7 @@ app.get('/api/resolutions', function(req, res, next) {
         function(data) {
           //var careerState = getCareerState(data);
           var dto = {
+            resolutionId: data.resolution_id,
             resolutionTypeName: data.name,
             resolutionNumber: data.number_resolution,
             resolutionYear: data.year_resolution,
@@ -597,6 +596,7 @@ app.post('/api/title', function(req, res, next) {
         logger.info('Beggining transaction');
         client.query('begin work', cb);
         title = req.body.title;
+        logger.info(title);
       },
       // TODO: async parallel 
       // 2nd step: look for the selected title state id
@@ -636,7 +636,28 @@ app.post('/api/title', function(req, res, next) {
           cb();
         });
       },
-      // 5th step: update the title
+      // 5th step: asociate the title with the resolutions (if any)
+      function(cb){
+        if(!!title.resolutions){
+          async.forEach(title.resolutions, function(resolutionId, cb){
+            var sql = "select * from model.title_resolution where title_id=$1 and resolution_id=$2 and state_enable=true";
+            var params = [title.idTitle,resolutionId];
+            client.query(sql, params, function(err, result){
+              if(!!result.rows[0]){ // the relationship already existed
+                cb();
+              }
+              else{
+                var sql = "insert into model.title_resolution "+
+                            "values ($1, true, $2, $3)";
+                var params = [uuid.v4(), title.idTitle, resolutionId];
+                client.query(sql, params, cb);
+              }
+            });
+          });
+        }
+        cb();
+      },
+      // 6th step: update the title
       function(cb){
         var sql = "update model.title "+
                 "set code=$2, title=$3, female_title=$4, comment=$5, "+
@@ -659,7 +680,6 @@ app.post('/api/title', function(req, res, next) {
         });
       }
       client.query('commit work', function(err, result) {
-        logger.info("Commited");
         sql = "SELECT * from model.v_titles where title_id=$1";
         var parameters = [title.idTitle];
         client.query(sql, parameters, function(err, result){
@@ -714,7 +734,8 @@ app.post('/api/resolution', function(req, res, next){
       },
       // 2nd step: check if the resolution exists, create it if it doesnt
       function(cb) {
-        var sql = "select * from model.resolution r "+ 
+        var sql = "select r.id as id_resolution, name, number_resolution, year_resolution "+
+                  "from model.resolution r "+ 
                     "left join model.resolution_type rt "+
                     "on r.type_resolution_id=rt.id "+
                   "where type_resolution_id=$1 " + 
@@ -723,14 +744,14 @@ app.post('/api/resolution', function(req, res, next){
         var params = [resolution.idResolutionType,
                       resolution.resolutionNumber,
                       resolution.resolutionYear];
-                      logger.info(params);
         client.query(sql, params, function(err, result){
           // the resolution exists
           if(!!result.rows[0]){
             var resolutionFound = {};
+            resolutionFound.resolutionId       = result.rows[0].id_resolution;
             resolutionFound.resolutionTypeName = result.rows[0].name;
-            resolutionFound.resolutionNumber = result.rows[0].number_resolution;
-            resolutionFound.resolutionYear = result.rows[0].year_resolution;
+            resolutionFound.resolutionNumber   = result.rows[0].number_resolution;
+            resolutionFound.resolutionYear     = result.rows[0].year_resolution;
             res.json({status: 'ok', existingResolution: true, resolution:resolutionFound});
             done();
             cb();
@@ -745,7 +766,7 @@ app.post('/api/resolution', function(req, res, next){
               "values ($1, true, $2, $3, $4) " +
               "returning *) " +
             //joining in order to get the res type name
-            "select * from ins left join model.resolution_type rt " + 
+            "select ins.id as id_resolution, name, number_resolution, year_resolution from ins left join model.resolution_type rt " + 
               "on ins.type_resolution_id = rt.id";
             var params = [uuid.v4(), resolution.idResolutionType,
                           resolution.resolutionNumber,
@@ -755,9 +776,10 @@ app.post('/api/resolution', function(req, res, next){
                 logger.error('Could not create resolution');
                 return next(err);
               }
+              resolutionCreated.resolutionId       = result.rows[0].id_resolution;
               resolutionCreated.resolutionTypeName = result.rows[0].name;
-              resolutionCreated.resolutionNumber = result.rows[0].number_resolution;
-              resolutionCreated.resolutionYear = result.rows[0].year_resolution;
+              resolutionCreated.resolutionNumber   = result.rows[0].number_resolution;
+              resolutionCreated.resolutionYear     = result.rows[0].year_resolution;
               res.json({status: 'ok', existingResolution: false, resolution:resolutionCreated});
               done();
               cb();
