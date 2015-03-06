@@ -583,19 +583,22 @@ app.get('/api/resolutions', function(req, res, next) {
 // update title info
 app.post('/api/title', function(req, res, next) {
   logger.info('Request POST recieved for /api/title');
+  var title = req.body.title;
+  if(!title || !title.state || !title.titleType || !title.titleMode || !title.idTitle || !title.titleCode || !title.titleName || !title.titleFemaleName){
+    return next({status: 400, message: 'Missing mandatory parameters.'});
+  }
+
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
       logger.error('Could not connect to nahuel database');
       return next(err);
     }
-    var title = {};
     async.series([
       // 1st step: begin transaction
       function(cb) {
         logger.info('Beggining transaction');
         client.query('begin work', cb);
-        title = req.body.title;
         logger.info(title);
       },
       // TODO: async parallel 
@@ -710,17 +713,23 @@ app.post('/api/title', function(req, res, next) {
 // retrieve or create a resolution
 app.post('/api/resolution', function(req, res, next){
   logger.info('Request POST recieved for /api/resolution');
+  var resolution = req.body.resolution;
+
+  //checking for required fields
+  if(!resolution || !resolution.resolutionTypeCode || !resolution.resolutionNumber || !resolution.resolutionYear){
+    logger.info(resolution);
+    return next({status: 400, message: 'Missing mandatory parameters.'});
+  }
+  
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
       logger.error('Could not connect to nahuel database');
       return next(err);
     }
-    var resolution = {};
     async.series([
       //1st step: get the resolution type id
       function(cb) {
-        resolution = req.body.resolution;
         var sql = "select id from model.resolution_type "+
                     "where code =$1";
         var params = [resolution.resolutionTypeCode];
