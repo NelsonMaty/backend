@@ -34,7 +34,7 @@
 
   // connecting to nahuel database
   var conString = "postgres://postgres@localhost/nahuel_dev";
-
+  var defaultSchema = "model";
 
 // ROUTES FOR OUR API
 // ===========================================================================
@@ -58,10 +58,14 @@ app.get('/api/titles', function(req, res, next) {
     }
 
     //preparing query
-    var sql = ''; // base query
+    var sql = ' select * from '+defaultSchema+'.v_titles'; // base query
     var careerArray = [];      // response array
+    var contains = req.param("contains");
+    if(!!contains){
+      sql = "select * from "+defaultSchema+".v_titles where career_name ilike '%"+contains+"%' OR title ilike '%"+contains+"%' OR career_code = '"+contains+"' OR title_code = '"+contains+"'";
+    }
 
-    var filters_mapping = {    // database columns mapping and comparison mode 
+   /* var filters_mapping = {    // database columns mapping and comparison mode 
       institution:  {column_name:'edu_institution_name', strictCompare: false},
       academicUnit: {column_name:'academic_unit_name',   strictCompare: false},
       careerType:   {column_name:'career_type_name',     strictCompare: true },
@@ -86,10 +90,10 @@ app.get('/api/titles', function(req, res, next) {
                     "academic_unit_name, career_code, career_name, title_code, title, "+
                     "title_female_title, title_type_name, title_comment, title_mode_name,"+ 
                     "title_state_code, year_resolution, number_resolution, rt.name "+
-                  "from model.v_titles vt " +
-                    "left join model.title_resolution tr on vt.title_id = tr.title_id " +
-                    "left join model.resolution r on tr.resolution_id = r.id " +
-                    "left join model.resolution_type rt on r.type_resolution_id=rt.id " +
+                  "from "+defaultSchema+".v_titles vt " +
+                    "left join "+defaultSchema+".title_resolution tr on vt.title_id = tr.title_id " +
+                    "left join "+defaultSchema+".resolution r on tr.resolution_id = r.id " +
+                    "left join "+defaultSchema+".resolution_type rt on r.type_resolution_id=rt.id " +
                   "where " ;
           isFirstParam = false;
         }
@@ -104,7 +108,7 @@ app.get('/api/titles', function(req, res, next) {
       if (!!req.param(key)){
         // building sql query string
         if(isFirstParam)
-          {sql += "SELECT * from model.v_titles where "; isFirstParam = false;}
+          {sql += "SELECT * from "+defaultSchema+".v_titles where "; isFirstParam = false;}
         else
           sql += " and ";
         if(filters_mapping[key].strictCompare)
@@ -129,7 +133,7 @@ app.get('/api/titles', function(req, res, next) {
         sql_like = "title_state_code like any('{\"" + sql_like + "\"}')";
 
         if(isFirstParam)
-          {sql += "SELECT * from model.v_titles where "; isFirstParam = false;}
+          {sql += "SELECT * from "+defaultSchema+".v_titles where "; isFirstParam = false;}
         else
           sql += " and ";
         sql += sql_like;
@@ -138,8 +142,8 @@ app.get('/api/titles', function(req, res, next) {
 
     //no parameteres had been sent
     if (isFirstParam){
-      sql = "SELECT * from model.v_titles";
-    }
+      sql = "SELECT * from "+defaultSchema+".v_titles";
+    }*/
 
     //querying database
     client.query(sql, function(err, result) {
@@ -190,7 +194,7 @@ app.get('/api/institutions', function(req, res, next) {
     }
 
     //querying database
-    var sql = 'SELECT * from model.edu_institution';
+    var sql = 'SELECT * from '+defaultSchema+'.edu_institution';
     var institutionArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -235,7 +239,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
     [
     // Step number 1: Get all academic units
     function(callback){ 
-      var sql = 'SELECT * from model.academic_unit';
+      var sql = 'SELECT * from '+defaultSchema+'.academic_unit';
       client.query(sql, function(err, result) {
 
         //Return if an error occurs
@@ -262,7 +266,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
     // Step number 2: group careers by academic unit id, then assign them as its children
     function(callback){
       async.forEach(Object.keys(auArray), function(key, callback){
-        var sql = "select c.name from model.career c join model.academic_unit au on c.academic_unit_id=au.id where au.id='"+key+"'";
+        var sql = "select c.name from "+defaultSchema+".career c join "+defaultSchema+".academic_unit au on c.academic_unit_id=au.id where au.id='"+key+"'";
         client.query(sql, function(err,result){
           //Return if an error occurs
           if(err) {
@@ -325,7 +329,7 @@ app.get('/api/academicUnits', function(req, res, next) {
     }
 
     //querying database
-    var sql = 'SELECT * from model.academic_unit';
+    var sql = 'SELECT * from '+defaultSchema+'.academic_unit';
     var auArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -362,7 +366,7 @@ app.get('/api/careerTypes', function(req, res, next) {
     }
 
     //querying database
-    var sql = 'SELECT * from model.career_type';
+    var sql = 'SELECT * from '+defaultSchema+'.career_type';
     var responseArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -399,7 +403,7 @@ app.get('/api/titleTypes', function(req, res, next) {
     }
 
     //querying database
-    var sql = 'SELECT * from model.title_type';
+    var sql = 'SELECT * from '+defaultSchema+'.title_type';
     var responseArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -436,7 +440,7 @@ app.get('/api/titleModes', function(req, res, next){
     }
 
     //querying database
-    var sql = 'SELECT * from model.title_mode';
+    var sql = 'SELECT * from '+defaultSchema+'.title_mode';
     var responseArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -473,7 +477,7 @@ app.get('/api/careers', function(req, res, next) {
     }
 
     //querying database
-    var sql = 'SELECT * from model.career';
+    var sql = 'SELECT * from '+defaultSchema+'.career';
     var responseArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -510,7 +514,7 @@ app.get('/api/resolutionTypes', function(req, res, next) {
     }
 
     //querying database
-    var sql = 'SELECT * from model.resolution_type';
+    var sql = 'SELECT * from '+defaultSchema+'.resolution_type';
     var responseArray = [];
     client.query(sql, function(err, result) {
       //Return if an error occurs
@@ -546,9 +550,9 @@ app.get('/api/resolutions', function(req, res, next) {
       return next(err);
     }
     //querying database
-    var sql = 'select * from model.title_resolution tr '+
-                'left join model.resolution r on tr.resolution_id=r.id '+
-                'left join model.resolution_type rt on r.type_resolution_id = rt.id';
+    var sql = 'select * from '+defaultSchema+'.title_resolution tr '+
+                'left join '+defaultSchema+'.resolution r on tr.resolution_id=r.id '+
+                'left join '+defaultSchema+'.resolution_type rt on r.type_resolution_id = rt.id';
     if (!!req.param('idTitle')){
       sql += " where tr.title_id = '"+req.param('idTitle')+"'";
     }
@@ -604,7 +608,7 @@ app.post('/api/title', function(req, res, next) {
       // TODO: async parallel 
       // 2nd step: look for the selected title state id
       function(cb){
-        var sql = "select id from model.title_state "+ 
+        var sql = "select id from "+defaultSchema+".title_state "+ 
                 "where code=$1";
         var parameters = [title.state];
         client.query(sql, parameters, function(err, result){
@@ -617,7 +621,7 @@ app.post('/api/title', function(req, res, next) {
       },
       // 3rd step: look for the selected title type id
       function(cb){
-        var sql = "select id from model.title_type "+ 
+        var sql = "select id from "+defaultSchema+".title_type "+ 
                 "where code=$1";
         var parameters = [title.titleType];
         client.query(sql, parameters, function(err, result){
@@ -630,7 +634,7 @@ app.post('/api/title', function(req, res, next) {
       },
       // 4th step: look for the selected title mode id
       function(cb){
-        var sql = "select id from model.title_mode "+ 
+        var sql = "select id from "+defaultSchema+".title_mode "+ 
                 "where code=$1";
         var parameters = [title.titleMode];
         client.query(sql, parameters, function(err, result){
@@ -643,14 +647,14 @@ app.post('/api/title', function(req, res, next) {
       function(cb){
         if(!!title.resolutions){
           async.forEach(title.resolutions, function(resolutionId, cb){
-            var sql = "select * from model.title_resolution where title_id=$1 and resolution_id=$2 and state_enable=true";
+            var sql = "select * from "+defaultSchema+".title_resolution where title_id=$1 and resolution_id=$2 and state_enable=true";
             var params = [title.idTitle,resolutionId];
             client.query(sql, params, function(err, result){
               if(!!result.rows[0]){ // the relationship already existed
                 cb();
               }
               else{
-                var sql = "insert into model.title_resolution "+
+                var sql = "insert into "+defaultSchema+".title_resolution "+
                             "values ($1, true, $2, $3)";
                 var params = [uuid.v4(), title.idTitle, resolutionId];
                 client.query(sql, params, cb);
@@ -662,7 +666,7 @@ app.post('/api/title', function(req, res, next) {
       },
       // 6th step: update the title
       function(cb){
-        var sql = "update model.title "+
+        var sql = "update "+defaultSchema+".title "+
                 "set code=$2, title=$3, female_title=$4, comment=$5, "+
                     "title_state_id=$6, title_type_id=$7, title_mode_id=$8 "+
                 "where id=$1::varchar";
@@ -683,7 +687,7 @@ app.post('/api/title', function(req, res, next) {
         });
       }
       client.query('commit work', function(err, result) {
-        sql = "SELECT * from model.v_titles where title_id=$1";
+        sql = "SELECT * from "+defaultSchema+".v_titles where title_id=$1";
         var parameters = [title.idTitle];
         client.query(sql, parameters, function(err, result){
           done();
@@ -730,7 +734,7 @@ app.post('/api/resolution', function(req, res, next){
     async.series([
       //1st step: get the resolution type id
       function(cb) {
-        var sql = "select id from model.resolution_type "+
+        var sql = "select id from "+defaultSchema+".resolution_type "+
                     "where code =$1";
         var params = [resolution.resolutionTypeCode];
         client.query(sql, params, function(err, result){
@@ -744,8 +748,8 @@ app.post('/api/resolution', function(req, res, next){
       // 2nd step: check if the resolution exists, create it if it doesnt
       function(cb) {
         var sql = "select r.id as id_resolution, name, number_resolution, year_resolution "+
-                  "from model.resolution r "+ 
-                    "left join model.resolution_type rt "+
+                  "from "+defaultSchema+".resolution r "+ 
+                    "left join "+defaultSchema+".resolution_type rt "+
                     "on r.type_resolution_id=rt.id "+
                   "where type_resolution_id=$1 " + 
                     "AND number_resolution=$2 " +
@@ -775,12 +779,12 @@ app.post('/api/resolution', function(req, res, next){
             }
             var sql = 
             "with ins as ( " +
-              "insert into model.resolution " +
+              "insert into "+defaultSchema+".resolution " +
                 "(id, state_enable,type_resolution_id, number_resolution, year_resolution, date_resolution) " +
               "values ($1, true, $2, $3, $4, $5) " +
               "returning *) " +
             //joining in order to get the res type name
-            "select ins.id as id_resolution, name, number_resolution, year_resolution from ins left join model.resolution_type rt " + 
+            "select ins.id as id_resolution, name, number_resolution, year_resolution from ins left join "+defaultSchema+".resolution_type rt " + 
               "on ins.type_resolution_id = rt.id";
             var params = [uuid.v4(), resolution.idResolutionType,
                           resolution.resolutionNumber,
