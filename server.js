@@ -57,96 +57,98 @@ app.get('/api/titles', function(req, res, next) {
       return next(err);
     }
 
-    //preparing query
-    var sql = ' select * from '+defaultSchema+'.v_titles'; // base query
+    var sql = ''; 
     var careerArray = [];      // response array
     var contains = req.param("contains");
     if(!!contains){
       sql = "select * from "+defaultSchema+".v_titles where career_name ilike '%"+contains+"%' OR title ilike '%"+contains+"%' OR career_code = '"+contains+"' OR title_code = '"+contains+"'";
     }
+    else{
+      var filters_mapping = {    // database columns mapping and comparison mode 
+        institution:  {column_name:'edu_institution_name', strictCompare: false},
+        academicUnit: {column_name:'academic_unit_name',   strictCompare: false},
+        careerType:   {column_name:'career_type_name',     strictCompare: true },
+        career:       {column_name:'career_name',          strictCompare: false},
+        titleType:    {column_name:'title_type_name',      strictCompare: true },
+        title:        {column_name:'title',                strictCompare: false}
+      };
 
-   /* var filters_mapping = {    // database columns mapping and comparison mode 
-      institution:  {column_name:'edu_institution_name', strictCompare: false},
-      academicUnit: {column_name:'academic_unit_name',   strictCompare: false},
-      careerType:   {column_name:'career_type_name',     strictCompare: true },
-      career:       {column_name:'career_name',          strictCompare: false},
-      titleType:    {column_name:'title_type_name',      strictCompare: true },
-      title:        {column_name:'title',                strictCompare: false}
-    };
+      var resolution_filters_mapping = {
+        resolutionType:   {column_name:'rt.name'          },
+        resolutionNumber: {column_name:'number_resolution'},
+        resolutionYear:   {column_name:'year_resolution'  }
+      }
 
-    var resolution_filters_mapping = {
-      resolutionType:   {column_name:'rt.name'          },
-      resolutionNumber: {column_name:'number_resolution'},
-      resolutionYear:   {column_name:'year_resolution'  }
-    }
-
-    var isFirstParam = true;
-    // if filtering by resolution
-    for (var key in resolution_filters_mapping) { 
-      if (!!req.param(key)){
-        // building sql query string
-        if(isFirstParam) { // we will have to join the view with the resolution tables
-          sql +=   "select distinct(vt.title_id) as title_id, edu_institution_name, "+
-                    "academic_unit_name, career_code, career_name, title_code, title, "+
-                    "title_female_title, title_type_name, title_comment, title_mode_name,"+ 
-                    "title_state_code, year_resolution, number_resolution, rt.name "+
-                  "from "+defaultSchema+".v_titles vt " +
-                    "left join "+defaultSchema+".title_resolution tr on vt.title_id = tr.title_id " +
-                    "left join "+defaultSchema+".resolution r on tr.resolution_id = r.id " +
-                    "left join "+defaultSchema+".resolution_type rt on r.type_resolution_id=rt.id " +
-                  "where " ;
-          isFirstParam = false;
+      var isFirstParam = true;
+      // if filtering by resolution
+      for (var key in resolution_filters_mapping) { 
+        if (!!req.param(key)){
+          // building sql query string
+          if(isFirstParam) { // we will have to join the view with the resolution tables
+            sql +=   "select distinct(vt.title_id) as title_id, edu_institution_name, "+
+                      "academic_unit_name, career_code, career_name, title_code, title, "+
+                      "title_female_title, title_type_name, title_comment, title_mode_name,"+ 
+                      "title_state_code, year_resolution, number_resolution, rt.name "+
+                    "from "+defaultSchema+".v_titles vt " +
+                      "left join "+defaultSchema+".title_resolution tr on vt.title_id = tr.title_id " +
+                      "left join "+defaultSchema+".resolution r on tr.resolution_id = r.id " +
+                      "left join "+defaultSchema+".resolution_type rt on r.type_resolution_id=rt.id " +
+                    "where " ;
+            isFirstParam = false;
+          }
+          else
+            sql += " and ";
+          sql += resolution_filters_mapping[key].column_name + " = '" + req.param(key) + "'";
         }
-        else
-          sql += " and ";
-        sql += resolution_filters_mapping[key].column_name + " = '" + req.param(key) + "'";
+      }
+
+      // checking which filters were used (if any)
+      for (var key in filters_mapping) { 
+        if (!!req.param(key)){
+          // building sql query string
+          if(isFirstParam)
+            {sql += "SELECT * from "+defaultSchema+".v_titles where "; isFirstParam = false;}
+          else
+            sql += " and ";
+          if(filters_mapping[key].strictCompare)
+            sql += filters_mapping[key].column_name + " = '" + req.param(key) + "'";
+          else
+            sql += filters_mapping[key].column_name + " ilike '%" + req.param(key) +"%'";
+        }
+      }
+
+/*
+      // if filtering by title states
+      if(req.param('titleStates')){
+        var jsonStates = JSON.parse(req.param('titleStates'));
+        var statesArray = [];
+        
+        for (var k in jsonStates)
+          if(jsonStates[k])
+            statesArray.push(k);
+
+        if(statesArray.length > 0){
+          var sql_like = statesArray.join('","');
+          sql_like = "title_state_code like any('{\"" + sql_like + "\"}')";
+
+          if(isFirstParam)
+            {sql += "SELECT * from "+defaultSchema+".v_titles where "; isFirstParam = false;}
+          else
+            sql += " and ";
+          sql += sql_like;
+        }
+      }
+*/
+      //no parameteres have been sent
+      if (isFirstParam){
+        sql = "SELECT * from "+defaultSchema+".v_titles";
       }
     }
 
-    // checking which filters were used (if any)
-    for (var key in filters_mapping) { 
-      if (!!req.param(key)){
-        // building sql query string
-        if(isFirstParam)
-          {sql += "SELECT * from "+defaultSchema+".v_titles where "; isFirstParam = false;}
-        else
-          sql += " and ";
-        if(filters_mapping[key].strictCompare)
-          sql += filters_mapping[key].column_name + " = '" + req.param(key) + "'";
-        else
-          sql += filters_mapping[key].column_name + " ilike '%" + req.param(key) +"%'";
-      }
-    }
-
-
-    // if filtering by title states
-    if(req.param('titleStates')){
-      var jsonStates = JSON.parse(req.param('titleStates'));
-      var statesArray = [];
-      
-      for (var k in jsonStates)
-        if(jsonStates[k])
-          statesArray.push(k);
-
-      if(statesArray.length > 0){
-        var sql_like = statesArray.join('","');
-        sql_like = "title_state_code like any('{\"" + sql_like + "\"}')";
-
-        if(isFirstParam)
-          {sql += "SELECT * from "+defaultSchema+".v_titles where "; isFirstParam = false;}
-        else
-          sql += " and ";
-        sql += sql_like;
-      }
-    }
-
-    //no parameteres had been sent
-    if (isFirstParam){
-      sql = "SELECT * from "+defaultSchema+".v_titles";
-    }*/
 
     //querying database
     client.query(sql, function(err, result) {
+      logger.info("Running query: " + sql);
 
       //Return if an error occurs
       if(err) {
