@@ -117,15 +117,9 @@ app.get('/api/titles', function(req, res, next) {
         }
       }
 
-/*
       // if filtering by title states
       if(req.param('titleStates')){
-        var jsonStates = JSON.parse(req.param('titleStates'));
-        var statesArray = [];
-        
-        for (var k in jsonStates)
-          if(jsonStates[k])
-            statesArray.push(k);
+        var statesArray = req.param('titleStates').trim().split(/\s+/);
 
         if(statesArray.length > 0){
           var sql_like = statesArray.join('","');
@@ -138,7 +132,7 @@ app.get('/api/titles', function(req, res, next) {
           sql += sql_like;
         }
       }
-*/
+
       //no parameteres have been sent
       if (isFirstParam){
         sql = "SELECT * from "+defaultSchema+".v_titles";
