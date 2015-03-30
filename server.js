@@ -42,7 +42,7 @@
 app.all('*', function(req, res, next) {
   // Enabling 'Access-Control-Allow-Origin'
   res.header("Access-Control-Allow-Origin", "*");
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,HEAD,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET,POST');
   res.header('Access-Control-Allow-Headers', 'content-Type,x-requested-with');
   next();
  });
@@ -67,6 +67,7 @@ app.get('/api/titles', function(req, res, next) {
       var filters_mapping = {    // database columns mapping and comparison mode 
         institution:  {column_name:'edu_institution_name', strictCompare: false},
         academicUnit: {column_name:'academic_unit_name',   strictCompare: false},
+        academicUnitCode: {column_name:'academic_unit_code',   strictCompare: true },
         careerType:   {column_name:'career_type_name',     strictCompare: true },
         career:       {column_name:'career_name',          strictCompare: false},
         titleType:    {column_name:'title_type_name',      strictCompare: true },
@@ -249,6 +250,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
           function(data) {
             var au = {
               auName: data.name,
+              auCode: data.code_b,
               auParent: data.academic_unit_parent_id,
               auChildren: [],
             }
@@ -274,7 +276,6 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
               auArray[key].auChildren.push({"name":data.name});
             }
           );
-          //logger.info(key, auArray[key].auChildren);
           callback();
         });
       },callback);
@@ -283,7 +284,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
     function(callback){
       for (var id in auArray){
         //Academic unit dictionary
-        academicUnitsHierarchy[id] = {"name":auArray[id].auName, "parent":auArray[id].auParent, "children": auArray[id].auChildren};
+        academicUnitsHierarchy[id] = {"name":auArray[id].auName, "code":auArray[id].auCode ,"parent":auArray[id].auParent, "children": auArray[id].auChildren};
         //logger.info(id, academicUnitsHierarchy[id]);
       }
       //place each academic unit where it belongs
