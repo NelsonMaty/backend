@@ -65,13 +65,12 @@ app.get('/api/titles', function(req, res, next) {
     }
     else{
       var filters_mapping = {    // database columns mapping and comparison mode 
-        institution:  {column_name:'edu_institution_name', strictCompare: false},
-        academicUnit: {column_name:'academic_unit_name',   strictCompare: false},
-        academicUnitCode: {column_name:'academic_unit_code',   strictCompare: true },
-        careerType:   {column_name:'career_type_name',     strictCompare: true },
-        career:       {column_name:'career_name',          strictCompare: false},
-        titleType:    {column_name:'title_type_name',      strictCompare: true },
-        title:        {column_name:'title',                strictCompare: false}
+        institution:      {column_name:'edu_institution_name', strictCompare: false},
+        academicUnit:     {column_name:'academic_unit_name',   strictCompare: false},
+        careerType:       {column_name:'career_type_name',     strictCompare: true },
+        career:           {column_name:'career_name',          strictCompare: false},
+        titleType:        {column_name:'title_type_name',      strictCompare: true },
+        title:            {column_name:'title',                strictCompare: false}
       };
 
       var resolution_filters_mapping = {
@@ -159,6 +158,7 @@ app.get('/api/titles', function(req, res, next) {
             idTitle: data.title_id,
             institutionName: data.edu_institution_name,
             academicUnit: data.academic_unit_name,
+            academicUnitCode: data.academic_unit_code,
             careerCode: data.career_code,
             careerName: data.career_name,
             titleCode: data.title_code,
@@ -174,8 +174,62 @@ app.get('/api/titles', function(req, res, next) {
           careerArray.push(career);
         }
       );
-      done(); //release the pg client back to the pool 
-      res.json(careerArray);
+
+      //if filtering by academic unit subtree code
+      if(req.param('academicUnitCode')){
+        var sql = 'SELECT * from '+defaultSchema+'.academic_unit';
+        var auArray = [];
+        var auRootID;
+        client.query(sql, function(err, result) {
+          //Return if an error occurs
+          if(err) {
+            logger.error('error running query: ' + sql);
+            return next(err);
+          }
+
+          // Storing result in an array
+          result.rows.forEach(
+            function(data) {
+              auArray.push(
+                {code: data.code_b,
+                 id: data.id,
+                 idParent: data.academic_unit_parent_id,
+                }
+              );
+              if(data.code_b == req.param('academicUnitCode')){
+                auRootID = data.id;
+              }
+            }
+          );
+          //TODO check if  auRootID exists
+          var auSubtreeArray = []; //array that will contain au codes existing in the requested subtree
+          var queue = [{id:auRootID, code:req.param('academicUnitCode')}]; //auxiliar array
+          //logger.info("AU Code recieved: ",queue);
+          var auAux;
+          while(queue.length != 0){
+            auAux = queue.pop();
+            //logger.info("Current node: ", auAux.code);
+            auSubtreeArray.push(auAux.code);
+            auArray.forEach(function(au){
+              if(au.idParent == auAux.id){
+                queue.push(au);
+              }
+            });
+          }
+          logger.info("auSubtreeArray: ", auSubtreeArray);
+          for (var i = careerArray.length; i>0; i--){
+            if(auSubtreeArray.indexOf(careerArray[i-1].academicUnitCode) < 0){
+              careerArray.splice(i-1, 1);
+            }
+          }
+          done(); //release the pg client back to the pool 
+          res.json(careerArray);
+        });
+      }
+      else{
+        done(); //release the pg client back to the pool 
+        res.json(careerArray);
+      }
     });
   });
 });
