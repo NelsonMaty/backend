@@ -34,7 +34,7 @@
 
   // connecting to nahuel database
   var conString = "postgres://postgres@localhost/nahuel_dev";
-  var defaultSchema = "model";
+  var defaultSchema = "nahuel";
 
 // ROUTES FOR OUR API
 // ===========================================================================
@@ -69,6 +69,7 @@ app.get('/api/titles', function(req, res, next) {
         academicUnit:     {column_name:'academic_unit_name',   strictCompare: false},
         careerType:       {column_name:'career_type_name',     strictCompare: true },
         career:           {column_name:'career_name',          strictCompare: false},
+        careerCode:       {column_name:'career_code',          strictCompare: true },
         titleType:        {column_name:'title_type_name',      strictCompare: true },
         title:            {column_name:'title',                strictCompare: false}
       };
@@ -318,7 +319,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
     // Step number 2: group careers by academic unit id, then assign them as its children
     function(callback){
       async.forEach(Object.keys(auArray), function(key, callback){
-        var sql = "select c.name from "+defaultSchema+".career c join "+defaultSchema+".academic_unit au on c.academic_unit_id=au.id where au.id='"+key+"'";
+        var sql = "select c.name, c.code from "+defaultSchema+".career c join "+defaultSchema+".academic_unit au on c.academic_unit_id=au.id where au.id='"+key+"'";
         client.query(sql, function(err,result){
           //Return if an error occurs
           if(err) {
@@ -327,7 +328,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
           }
           result.rows.forEach(
             function(data) {
-              auArray[key].auChildren.push({"name":data.name});
+              auArray[key].auChildren.push({"name":data.name, "code":data.code});
             }
           );
           callback();
