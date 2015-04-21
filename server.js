@@ -88,7 +88,7 @@ app.get('/api/titles', function(req, res, next) {
           if(isFirstParam) { // we will have to join the view with the resolution tables
             sql +=   "select distinct(vt.title_id) as title_id, edu_institution_name, "+
                       "academic_unit_name, career_code, career_name, title_code, title, "+
-                      "title_female_title, title_type_name, title_comment, title_mode_name,"+ 
+                      "title_female_title, title_type_name, title_comment, title_cg, title_mode_name,"+ 
                       "title_state_code, year_resolution, number_resolution, rt.name "+
                     "from "+defaultSchema+".v_titles vt " +
                       "left join "+defaultSchema+".title_resolution tr on vt.title_id = tr.title_id " +
@@ -168,6 +168,7 @@ app.get('/api/titles', function(req, res, next) {
             titleType: data.title_type_name,
             titleTypeCode: data.title_type_code,
             titleComment: data.title_comment,
+            titleCG: data.title_cg,
             titleMode: data.title_mode_name,
             titleModeCode: data.title_mode_code,
             state: data.title_state_code
@@ -217,7 +218,6 @@ app.get('/api/titles', function(req, res, next) {
               }
             });
           }
-          logger.info("auSubtreeArray: ", auSubtreeArray);
           for (var i = careerArray.length; i>0; i--){
             if(auSubtreeArray.indexOf(careerArray[i-1].academicUnitCode) < 0){
               careerArray.splice(i-1, 1);
@@ -640,7 +640,9 @@ app.get('/api/resolutions', function(req, res, next) {
 app.post('/api/title', function(req, res, next) {
   logger.info('Request POST recieved for /api/title');
   var title = req.body.title;
-  if(!title || !title.state || !title.titleType || !title.titleMode || !title.idTitle || !title.titleCode || !title.titleName || !title.titleFemaleName){
+  if(!title || !title.state || !title.titleType || 
+     !title.titleMode || !title.idTitle || !title.titleCode || 
+     !title.titleName || !title.titleFemaleName || typeof title.titleCG === "undefined"){
     return next({status: 400, message: 'Missing mandatory parameters.'});
   }
 
@@ -655,7 +657,6 @@ app.post('/api/title', function(req, res, next) {
       function(cb) {
         logger.info('Beggining transaction');
         client.query('begin work', cb);
-        logger.info(title);
       },
       // TODO: async parallel 
       // 2nd step: look for the selected title state id
@@ -683,6 +684,7 @@ app.post('/api/title', function(req, res, next) {
             title.type_id=null;
           cb();
         });
+
       },
       // 4th step: look for the selected title mode id
       function(cb){
@@ -720,11 +722,11 @@ app.post('/api/title', function(req, res, next) {
       function(cb){
         var sql = "update "+defaultSchema+".title "+
                 "set code=$2, title=$3, female_title=$4, comment=$5, "+
-                    "title_state_id=$6, title_type_id=$7, title_mode_id=$8 "+
+                    "title_state_id=$6, title_type_id=$7, title_mode_id=$8, cg=$9 "+
                 "where id=$1::varchar";
         var parameters = [title.idTitle, title.titleCode, title.titleName,
                     title.titleFemaleName, title.titleComment, 
-                    title.state_id, title.type_id, title.mode_id];
+                    title.state_id, title.type_id, title.mode_id, title.titleCG];
         client.query(sql, parameters, cb);
       }
     ],
@@ -757,7 +759,8 @@ app.post('/api/title', function(req, res, next) {
             titleComment: result.rows[0].title_comment,
             titleMode: result.rows[0].title_mode_name,
             titleModeCode: result.rows[0].title_mode_code,
-            state: result.rows[0].title_state_code
+            state: result.rows[0].title_state_code,
+            titleCG: result.rows[0].title_cg
           }
           res.json({status: 'ok', message: 'Successful update', updatedTitle:title});
         });
