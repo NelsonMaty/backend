@@ -71,7 +71,8 @@ app.get('/api/titles', function(req, res, next) {
         career:           {column_name:'career_name',          strictCompare: false},
         careerCode:       {column_name:'career_code',          strictCompare: true },
         titleType:        {column_name:'title_type_name',      strictCompare: true },
-        title:            {column_name:'title',                strictCompare: false}
+        title:            {column_name:'title',                strictCompare: false},
+        titleCode:        {column_name:'title_code',           strictCompare: true }
       };
 
       var resolution_filters_mapping = {
