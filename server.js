@@ -4,13 +4,15 @@
 // ============================================================================
   // call the packages we need
   var express    = require('express');        // call express
-  var app        = express();                 // define our app using express
   var pg         = require('pg.js');          // call postgres client
+  var fs         = require('fs');             // file system reade  var bodyParser = require('body-parser');    // body parser used in order to read any json data submitted
 
   var bodyParser = require('body-parser');    // body parser used in order to read any json data submitted
   var winston    = require('winston');        // logger
-  var async      = require('async');          //function sequence controller
-  var uuid       = require('node-uuid');      //uuid generator
+  var async      = require('async');          // function sequence controller
+  var uuid       = require('node-uuid');      // uuid generator
+
+  //logger config
   var logger = new (winston.Logger)({
     transports: [
       new (winston.transports.Console)(
@@ -26,15 +28,27 @@
     ]
   });
 
+  // define our app using express
+  var app = express();
   app.use(bodyParser.urlencoded({ extended: true }));
   app.use(bodyParser.json());
 
+  //reading config file
+  var config = JSON.parse(fs.readFileSync('/etc/nodejs-config/nahuel-1.1-webservice.json'));
+
   // setting listening port
-  var port = process.env.PORT || 8080;
+  var port = config.port || 8080;
+  var host = config.host + ":" + port ;
 
   // connecting to nahuel database
-  var conString = "postgres://postgres@localhost/nahuel_dev";
-  var defaultSchema = "nahuel";
+  var conString = "postgres://" + 
+                  config.pg.user + ":" +
+                  config.pg.pass + "@" + 
+                  config.pg.host + "/" + 
+                  config.pg.db;
+
+  var defaultSchema = config.pg.schema || "nahuel";
+
 
 // ROUTES FOR OUR API
 // ===========================================================================
