@@ -38,7 +38,6 @@
 
   // setting listening port
   var port = config.port || 8080;
-  var host = config.host + ":" + port ;
 
   // connecting to nahuel database
   var conString = "postgres://" + 
