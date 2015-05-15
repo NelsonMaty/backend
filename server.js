@@ -63,11 +63,11 @@ app.all('*', function(req, res, next) {
 
 // retrieve titles
 app.get('/api/titles', function(req, res, next) {
-  logger.info('Request GET recieved for /api/titles');
+  //logger.info('Request GET recieved for /api/titles');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -158,11 +158,11 @@ app.get('/api/titles', function(req, res, next) {
 
     //querying database
     client.query(sql, function(err, result) {
-      logger.info("Running query: " + sql);
+      //logger.info("Running query: " + sql);
 
       //Return if an error occurs
       if(err) {
-        logger.error('Error running query.' + sql);
+        //logger.error('Error running query.' + sql);
         return next(err);
       }
 
@@ -200,7 +200,7 @@ app.get('/api/titles', function(req, res, next) {
         client.query(sql, function(err, result) {
           //Return if an error occurs
           if(err) {
-            logger.error('error running query: ' + sql);
+            //logger.error('error running query: ' + sql);
             return next(err);
           }
 
@@ -252,11 +252,11 @@ app.get('/api/titles', function(req, res, next) {
 
 // retrieve all institutions
 app.get('/api/institutions', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/institutions');
+  //logger.info('Request GET recieved for /api/institutions');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -266,7 +266,7 @@ app.get('/api/institutions', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -289,12 +289,12 @@ app.get('/api/institutions', function(req, res, next) {
 
 // retrieve the academic units in a tree format
 app.get('/api/academicUnitsHierarchy', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/academicUnitsHierarchy');
+  //logger.info('Request GET recieved for /api/academicUnitsHierarchy');
   pg.connect(conString, function(err, client, done){
 
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -311,7 +311,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
 
         //Return if an error occurs
         if(err) {
-          logger.error('error running query: ' + sql);
+          //logger.error('error running query: ' + sql);
           return next(err);
         }
 
@@ -338,7 +338,7 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
         client.query(sql, function(err,result){
           //Return if an error occurs
           if(err) {
-            logger.error('error running query: ' + sql);
+            //logger.error('error running query: ' + sql);
             return next(err);
           }
           result.rows.forEach(
@@ -387,11 +387,11 @@ app.get('/api/academicUnitsHierarchy', function(req, res, next) {
 
 // retrieve all academic units
 app.get('/api/academicUnits', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/academicUnits');
+  //logger.info('Request GET recieved for /api/academicUnits');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -401,7 +401,7 @@ app.get('/api/academicUnits', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -424,11 +424,11 @@ app.get('/api/academicUnits', function(req, res, next) {
 
 // retrieve all career types
 app.get('/api/careerTypes', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/careerTypes');
+  //logger.info('Request GET recieved for /api/careerTypes');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -438,7 +438,7 @@ app.get('/api/careerTypes', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -461,11 +461,11 @@ app.get('/api/careerTypes', function(req, res, next) {
 
 // retrieve all title types
 app.get('/api/titleTypes', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/titleTypes');
+  //logger.info('Request GET recieved for /api/titleTypes');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -475,7 +475,7 @@ app.get('/api/titleTypes', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -498,11 +498,11 @@ app.get('/api/titleTypes', function(req, res, next) {
 
 //retrieve all title modes
 app.get('/api/titleModes', function(req, res, next){
-  logger.info('Request GET recieved for /api/titleModes');
+  //logger.info('Request GET recieved for /api/titleModes');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -512,7 +512,7 @@ app.get('/api/titleModes', function(req, res, next){
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -535,11 +535,11 @@ app.get('/api/titleModes', function(req, res, next){
 
 // retrieve all institutions
 app.get('/api/careers', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/careers');
+  //logger.info('Request GET recieved for /api/careers');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -549,7 +549,7 @@ app.get('/api/careers', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -572,11 +572,11 @@ app.get('/api/careers', function(req, res, next) {
 
 // retrieve all institutions
 app.get('/api/resolutionTypes', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/resolutionTypes');
+  //logger.info('Request GET recieved for /api/resolutionTypes');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
 
@@ -586,7 +586,7 @@ app.get('/api/resolutionTypes', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -609,11 +609,11 @@ app.get('/api/resolutionTypes', function(req, res, next) {
 
 // retrieve resolutions
 app.get('/api/resolutions', function(req, res, next) { 
-  logger.info('Request GET recieved for /api/resolutions');
+  //logger.info('Request GET recieved for /api/resolutions');
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
     //querying database
@@ -627,7 +627,7 @@ app.get('/api/resolutions', function(req, res, next) {
     client.query(sql, function(err, result) {
       //Return if an error occurs
       if(err) {
-        logger.error('error running query: ' + sql);
+        //logger.error('error running query: ' + sql);
         return next(err);
       }
 
@@ -653,7 +653,7 @@ app.get('/api/resolutions', function(req, res, next) {
 
 // update title info
 app.post('/api/title', function(req, res, next) {
-  logger.info('Request POST recieved for /api/title');
+  //logger.info('Request POST recieved for /api/title');
   var title = req.body.title;
   if(!title || !title.state || !title.titleType || 
      !title.titleMode || !title.idTitle || !title.titleCode || 
@@ -664,13 +664,13 @@ app.post('/api/title', function(req, res, next) {
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
     async.series([
       // 1st step: begin transaction
       function(cb) {
-        logger.info('Beggining transaction');
+        //logger.info('Beggining transaction');
         client.query('begin work', cb);
       },
       // TODO: async parallel 
@@ -748,9 +748,9 @@ app.post('/api/title', function(req, res, next) {
     // Last step: commit if no error occurred, otherwise rollback
     function(err, result) {
       if(err) {
-        logger.error('Performing rollback.', err);
+        //logger.error('Performing rollback.', err);
         return client.query('rollback work', function() {
-          logger.info("Rollback completed");
+          //logger.info("Rollback completed");
           done();
           next(err);
         });
@@ -786,19 +786,19 @@ app.post('/api/title', function(req, res, next) {
 
 // retrieve or create a resolution
 app.post('/api/resolution', function(req, res, next){
-  logger.info('Request POST recieved for /api/resolution');
+  //logger.info('Request POST recieved for /api/resolution');
   var resolution = req.body.resolution;
 
   //checking for required fields
   if(!resolution || !resolution.resolutionTypeCode || !resolution.resolutionNumber || !resolution.resolutionYear){
-    logger.info(resolution);
+    //logger.info(resolution);
     return next({status: 400, message: 'Missing mandatory parameters.'});
   }
   
   pg.connect(conString, function(err, client, done){
     //Return if an error occurs
     if(err) {
-      logger.error('Could not connect to nahuel database');
+      //logger.error('Could not connect to nahuel database');
       return next(err);
     }
     async.series([
@@ -861,7 +861,7 @@ app.post('/api/resolution', function(req, res, next){
                           resolution.resolutionYear, resolutionDate];
             client.query(sql, params, function(err, result){
               if(err) {
-                logger.error('Could not create resolution');
+                //logger.error('Could not create resolution');
                 return next(err);
               }
               resolutionCreated.resolutionId       = result.rows[0].id_resolution;
